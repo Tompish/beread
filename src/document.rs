@@ -4,12 +4,14 @@ use crate::{documentparams::{ChangeDocument, OpenDocument}, error, DocumentError
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Document{
+    pub version: i32,
     pub content: HashMap<usize, String>
 }
 
 impl Document{
     pub fn new() -> Self{
         Self{
+            version: 1,
             content: HashMap::<usize, String>::new()
         }
     }
@@ -123,6 +125,7 @@ impl From<&str> for Document
 {
     fn from(value: &str) -> Self {
         Self{
+            version: 1,
             content: value.lines()
                 .enumerate()
                 .map(|l| (l.0, l.1.to_string()))
@@ -135,6 +138,7 @@ impl From<String> for Document
 {
     fn from(value: String) -> Self {
         Self{
+            version: 1,
             content: value.lines()
                 .enumerate()
                 .map(|l| (l.0, l.1.to_string()))
@@ -179,12 +183,7 @@ mod tests
 
         let _ = lib.change_document(params);
 
-        for (key, text) in lib.content.iter()
-        {
-            println!("key: {key}, text: {text}");
-        }
-
-        assert_eq!(lib.content.len(), 1);
+        assert_eq!(lib.content.len(), 2);
     }
 
     #[test]

@@ -6,48 +6,24 @@ use crate::documentparams::ChangeDocument;
 
 
 pub struct TableOfContents{
-    documents: HashMap<Uri, DocumentKeeper>
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct DocumentKeeper{
-    version: i32,
-    document: Document
-}
-
-impl DocumentKeeper{
-    pub fn new(version: i32, document: Document) -> DocumentKeeper{
-        Self{
-            version,
-            document
-        }
-    }
-    pub fn with_version(version: i32) -> DocumentKeeper{
-        DocumentKeeper{
-            version,
-            document: Document::new()
-        }
-    }
-    pub fn with_str(version: i32, text: &str) -> DocumentKeeper{
-        Self{ version, document: text.into() }
-    }
+    pub documents: HashMap<Uri, Document>
 }
 
 impl TableOfContents
 {
     pub fn new() -> TableOfContents{
         TableOfContents{
-            documents: HashMap::<Uri, DocumentKeeper>::new()
+            documents: HashMap::<Uri, Document>::new()
         }
     }
 
     pub fn did_change_document(&mut self, params: DidChangeTextDocumentParams) -> Result<(), TableOfContentsError>{
         match self.documents.get_mut(&params.text_document.uri)
         {
-            Some(keeper) => {
-                keeper.version = params.text_document.version;
+            Some(document) => {
+                document.version = params.text_document.version;
                 let document_param: ChangeDocument = params.try_into()?;
-                match keeper.document.change_document(document_param)
+                match document.change_document(document_param)
                 {
                     Ok(_) => Ok(()),
                     Err(doc_err) => Err(TableOfContentsError::DocumentError(doc_err))
@@ -59,7 +35,7 @@ impl TableOfContents
 
     pub fn did_open_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), TableOfContentsError>{
         
-        let doc = DocumentKeeper::with_str(1, &params.text_document.text[..]);
+        let doc: Document = params.text_document.text.into();
         match self.documents.insert(params.text_document.uri, doc)
         {
             _ => Ok(()),
@@ -69,13 +45,13 @@ impl TableOfContents
     pub fn get_document(&self, uri: &Uri) -> Option<&HashMap<usize, String>>{
         match self.documents.get(&uri)
         {
-            Some(doc_keeper) => Some(&doc_keeper.document.content),
+            Some(document) => Some(&document.content),
             _ => None
         }
     }
 
     //Returns deleted document, if there was a match
-    pub fn delete_document(&mut self, uri: Uri) -> Option<DocumentKeeper>{
+    pub fn delete_document(&mut self, uri: Uri) -> Option<Document>{
         self.documents.remove(&uri)
     }
 }
@@ -98,7 +74,7 @@ mod tests{
         assert_eq!(table.documents.len(), 1);
 
         let doc = &table.documents[&file_uri];
-        let second_row = &doc.document.content[&1usize];
+        let second_row = &doc.content[&1usize];
         assert_eq!(second_row, "don't fool the second line twice");
     }
 
@@ -128,7 +104,7 @@ mod tests{
         let _ = table.did_open_document(open_params);
         let _ = table.did_change_document(change_params);
 
-        let second_row = &table.documents[&uri].document.content[&1usize];
+        let second_row = &table.documents[&uri].content[&1usize];
         assert_eq!(second_row, "new text twice");
     }
 
